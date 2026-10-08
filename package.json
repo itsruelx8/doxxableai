@@ -1,10 +1,25 @@
 {
   "name": "how-doxxable-are-you",
   "version": "1.0.0",
-  "description": "Self-check privacy exposure scanner. Nothing is stored. Open source.",
+  "description": "Self-check privacy exposure scanner: how much can a stranger dig up from your email or username?",
   "main": "server.js",
-  "scripts": { "start": "node server.js", "test": "node test/smoke.js" },
-  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "privacy",
+    "osint",
+    "security",
+    "hackathon",
+    "hacktoberfest"
+  ],
   "license": "MIT",
-  "dependencies": { "express": "^4.19.2", "express-rate-limit": "^7.4.0" }
+  "dependencies": {
+    "express": "^4.22.3",
+    "express-rate-limit": "^7.5.1"
+  }
 }
