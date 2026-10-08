@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How Doxxable Are You? - privacy self-check</title>
+  <meta name="description" content="Self-check how exposed your email and username are online. Nothing is stored. Open source.">
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%B5%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <!-- jsQR (QR decoder) - not published on cdnjs, so it is loaded from jsDelivr with Subresource Integrity -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous" defer></script>
+  <script src="fx.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <canvas id="matrix" class="matrix" aria-hidden="true"></canvas>
+  <div class="spotlight" aria-hidden="true"></div>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div id="hud" class="hud" role="status">
+    <span id="hud-level" class="hud-level">LV 1</span>
+    <span id="hud-title" class="hud-title">Noob</span>
+    <div class="hud-xpwrap" aria-hidden="true"><div id="hud-bar" class="hud-bar"></div></div>
+    <span id="hud-xp" class="hud-xp">0 / 100 XP</span>
+    <button id="hud-badges-btn" class="hud-badges" type="button" aria-haspopup="dialog">&#9733; <span id="hud-badges">0/12</span></button>
+  </div>
+
+  <dialog id="badge-dialog" class="badge-dialog" aria-labelledby="badge-dialog-title">
+    <div class="badge-dialog-head">
+      <h2 id="badge-dialog-title">Achievements</h2>
+      <button class="btn btn-ghost btn-small" type="button" data-close>Close</button>
+    </div>
+    <p class="hint">Earn XP by scanning, fixing and checking. Progress lives only in this tab - close it and it is gone.</p>
+    <ul id="badge-list" class="badge-list"></ul>
+  </dialog>
+
+  <header class="hero">
+    <p class="prompt" aria-hidden="true">root@privacy:~$ ./doxx-check --self</p>
+    <h1 class="glitch" data-text="How Doxxable Are You?">How Doxxable Are You?</h1>
+    <p class="subtitle">Find out what a stranger can dig up from just your email or username - then lock it down in 10 minutes.</p>
+    <p class="mission">MISSION: find your leaks before someone else does. Earn XP. Unlock badges. Become a <strong>Digital Phantom</strong>.</p>
+    <p class="trust-banner"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg> Self-check only. Nothing is stored. Open source.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Tools">
+    <button role="tab" id="tab-scan" aria-controls="panel-scan" aria-selected="true">Identity Scan</button>
+    <button role="tab" id="tab-password" aria-controls="panel-password" aria-selected="false" tabindex="-1">Password Check</button>
+    <button role="tab" id="tab-qr" aria-controls="panel-qr" aria-selected="false" tabindex="-1">QR X-Ray</button>
+  </nav>
+
+  <main id="main">
+    <!-- ============ IDENTITY SCAN ============ -->
+    <section id="panel-scan" role="tabpanel" aria-labelledby="tab-scan" class="panel">
+      <form id="scan-form" class="card form-card" novalidate>
+        <div class="field">
+          <label for="email">Your email</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" maxlength="254" aria-describedby="email-hint">
+          <small id="email-hint" class="hint">Checked against breach databases and public GitHub commits.</small>
+        </div>
+        <div class="field">
+          <label for="username">Your username</label>
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="neo_1999" maxlength="40" spellcheck="false" autocapitalize="off" aria-describedby="username-hint">
+          <small id="username-hint" class="hint">1-39 characters: letters, digits, dot, underscore, hyphen.</small>
+        </div>
+        <label class="consent">
+          <input id="consent" type="checkbox">
+          <span>I own this email/username</span>
+        </label>
+        <div class="actions">
+          <button id="scan-btn" class="btn btn-primary btn-launch" type="submit" disabled>Scan me</button>
+          <button id="demo-btn" class="btn btn-ghost" type="button">Try demo data</button>
+        </div>
+        <p id="server-status" class="server-status checking"><span class="dot" aria-hidden="true"></span><span id="server-status-text">Connecting to scanner...</span></p>
+        <p id="form-error" class="alert" role="alert" hidden></p>
+      </form>
+
+      <section id="terminal" class="card terminal" hidden aria-label="Scan progress">
+        <div class="terminal-bar" aria-hidden="true"><span></span><span></span><span></span><em>doxx-check v1.0 - live trace</em></div>
+        <div class="terminal-body">
+          <div class="radar" aria-hidden="true">
+            <div class="radar-sweep"></div>
+            <div class="radar-ring r1"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div>
+            <div id="radar-blips" class="radar-blips"></div>
+            <span id="radar-pct" class="radar-pct">0%</span>
+          </div>
+          <ol id="terminal-log" class="terminal-log" role="log" aria-live="polite"></ol>
+        </div>
+        <div class="scan-progress" aria-hidden="true"><div id="scan-progress-bar" class="scan-progress-bar"></div></div>
+      </section>
+
+      <section id="results" class="results" hidden aria-live="polite">
+        <div class="card score-card">
+          <div class="gauge" role="img" id="gauge" aria-label="Doxx score">
+            <div class="gauge-orbit" aria-hidden="true"></div>
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <circle class="gauge-track" cx="100" cy="100" r="88"></circle>
+              <circle class="gauge-fill" id="gauge-fill" cx="100" cy="100" r="88"></circle>
+            </svg>
+            <div class="gauge-center">
+              <span id="score-value" class="score-value">0</span>
+              <span class="score-max">/ 100</span>
+            </div>
+          </div>
+          <div class="score-text">
+            <p class="eyebrow">Your Doxx Score <span id="demo-badge" class="badge" hidden>DEMO DATA</span></p>
+            <h2 id="results-heading" tabindex="-1"><span id="level-label">-</span></h2>
+            <p class="rank-line">Privacy class: <span id="rank" class="rank-stamp">-</span></p>
+            <div class="hp-row" aria-hidden="true"><span>PRIVACY HP</span><div class="hp-bar"><div id="hp-fill" class="hp-fill"></div></div><span id="hp-text">100</span></div>
+            <p id="verdict" class="verdict"></p>
+            <button id="share-btn" class="btn btn-ghost" type="button">Share result card (PNG)</button>
+          </div>
+        </div>
+
+        <div class="card plan-card">
+          <h3>Side quests: your 3-step cleanup plan</h3>
+          <p class="hint">Complete a quest to earn XP and watch your score fall.</p>
+          <ul id="plan-list" class="plan-list"></ul>
+          <div class="progress" aria-hidden="true"><div id="plan-progress" class="progress-bar"></div></div>
+          <p id="plan-projection" class="projection" aria-live="polite"></p>
+        </div>
+
+        <h3 class="section-title">Findings</h3>
+        <div id="cards" class="risk-cards"></div>
+        <p class="scanned-at" id="scanned-at"></p>
+      </section>
+    </section>
+
+    <!-- ============ PASSWORD CHECK ============ -->
+    <section id="panel-password" role="tabpanel" aria-labelledby="tab-password" class="panel" hidden>
+      <form id="pw-form" class="card form-card" novalidate>
+        <h2>Password Autopsy</h2>
+        <p class="note"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V11a1 1 0 0 1 1-1h1zm2 0h6V7a3 3 0 0 0-6 0v3z"/></svg> Your password never leaves this device. We hash it with SHA-1 in your browser and send only the first 5 characters of the hash (k-anonymity) to Have I Been Pwned.</p>
+        <div class="field">
+          <label for="pw">Password to check</label>
+          <div class="input-row">
+            <input id="pw" type="password" autocomplete="off" spellcheck="false">
+            <button id="pw-toggle" class="btn btn-ghost btn-small" type="button" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <div class="strength" aria-live="polite">
+          <div class="strength-bar" aria-hidden="true"><div id="strength-fill" class="strength-fill"></div></div>
+          <span id="strength-text" class="strength-text">Strength: -</span>
+        </div>
+        <div class="actions"><button id="pw-btn" class="btn btn-primary" type="submit">Check password</button></div>
+        <div id="pw-result" class="pw-result" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- ============ QR X-RAY ============ -->
+    <section id="panel-qr" role="tabpanel" aria-labelledby="tab-qr" class="panel" hidden>
+      <form id="qr-form" class="card form-card" novalidate>
+        <h2>QR X-Ray</h2>
+        <p class="note">Scanned a sketchy QR code on a parking meter or flyer? Upload a photo of it (decoded locally in your browser) or paste the link. We follow every redirect safely on the server and show where it really goes.</p>
+        <div class="field">
+          <label for="qr-file">QR code image</label>
+          <input id="qr-file" type="file" accept="image/*">
+        </div>
+        <div class="field">
+          <label for="qr-url">...or paste a URL</label>
+          <input id="qr-url" type="text" inputmode="url" placeholder="https://bit.ly/..." maxlength="2048" spellcheck="false" autocapitalize="off">
+        </div>
+        <div class="actions"><button id="qr-btn" class="btn btn-primary" type="submit">X-Ray this link</button></div>
+        <p id="qr-error" class="alert" role="alert" hidden></p>
+        <div id="qr-result" class="qr-result" aria-live="polite"></div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      <a href="https://github.com/your-org/how-doxxable-are-you" rel="noopener noreferrer">GitHub</a>
+      &middot; MIT License
+      &middot; Add your own check - see <a href="https://github.com/your-org/how-doxxable-are-you/blob/main/CONTRIBUTING.md" rel="noopener noreferrer">CONTRIBUTING.md</a>
+    </p>
+    <p class="small">Data sources: XposedOrNot, Have I Been Pwned (Pwned Passwords), GitHub API and public platform APIs. Only scan identities you own.</p>
+  </footer>
+</body>
+</html>

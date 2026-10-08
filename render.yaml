@@ -1,0 +1,16 @@
+# One-click deploy of the full app (frontend + API) on Render's free tier.
+services:
+  - type: web
+    name: how-doxxable-are-you
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: GITHUB_TOKEN
+        sync: false
